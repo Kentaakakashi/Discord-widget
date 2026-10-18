@@ -119,8 +119,10 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
     var notice by remember { mutableStateOf("Presets stay on this device • Discord publishing is not connected") }
     var clientId by remember { mutableStateOf(context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).getString("discord_client_id", "") ?: "") }
     var discordUser by remember { mutableStateOf("") }
-    var oauthState by remember { mutableStateOf("") }
-    var oauthVerifier by remember { mutableStateOf("") }
+    val oauthPrefs = remember { context.getSharedPreferences("presence_studio_oauth", android.content.Context.MODE_PRIVATE) }
+    // Persist PKCE transaction values so Android recreation does not lose them.
+    var oauthState by remember { mutableStateOf(oauthPrefs.getString("state", "") ?: "") }
+    var oauthVerifier by remember { mutableStateOf(oauthPrefs.getString("verifier", "") ?: "") }
     var oauthBusy by remember { mutableStateOf(false) }
     var oauthHandled by remember { mutableStateOf("") }
 
@@ -157,10 +159,20 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
         val returnedState = callback.getQueryParameter("state")
         val code = callback.getQueryParameter("code")
         val error = callback.getQueryParameter("error")
-        if (error != null) { notice = "Discord login cancelled or denied: $error"; return@LaunchedEffect }
-        if (returnedState.isNullOrBlank() || returnedState != oauthState || code.isNullOrBlank() || oauthVerifier.isBlank()) {
-            notice = "Discord callback invalid or expired. Try connecting again."; return@LaunchedEffect
+        if (error != null) {
+            oauthPrefs.edit().remove("state").remove("verifier").apply()
+            oauthState = ""; oauthVerifier = ""
+            notice = "Discord login cancelled or denied: $error"; return@LaunchedEffect
         }
+        val savedState = oauthPrefs.getString("state", "") ?: ""
+        val savedVerifier = oauthPrefs.getString("verifier", "") ?: ""
+        if (returnedState.isNullOrBlank() || savedState.isBlank() || returnedState != savedState ||
+            code.isNullOrBlank() || savedVerifier.isBlank()) {
+            notice = "Discord callback could not be verified. Start Connect Discord again. If it repeats, check the exact redirect URL in Developer Portal."
+            return@LaunchedEffect
+        }
+        oauthState = savedState
+        oauthVerifier = savedVerifier
         oauthBusy = true
         Executors.newSingleThreadExecutor().execute {
             try {
@@ -192,7 +204,9 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
                 if (meCode !in 200..299) error("Could not read Discord profile (HTTP $meCode)")
                 val me = JSONObject(meText)
                 val label = me.optString("global_name").ifBlank { me.optString("username", "Discord user") }
+                oauthPrefs.edit().remove("state").remove("verifier").apply()
                 Handler(Looper.getMainLooper()).post {
+                    oauthState = ""; oauthVerifier = ""
                     discordUser = label
                     oauthBusy = false
                     notice = "Connected as $label. Account login works; Rich Presence publishing is a separate integration."
@@ -251,6 +265,7 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
                                     val challenge = Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()), Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
                                     val state = Base64.encodeToString(ByteArray(24).also { SecureRandom().nextBytes(it) }, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
                                     oauthVerifier = verifier; oauthState = state
+                                    oauthPrefs.edit().putString("verifier", verifier).putString("state", state).apply()
                                     val auth = Uri.parse("https://discord.com/oauth2/authorize").buildUpon()
                                         .appendQueryParameter("client_id", id)
                                         .appendQueryParameter("response_type", "code")
