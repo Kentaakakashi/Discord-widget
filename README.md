@@ -38,3 +38,20 @@ The workflow uses Java 17, Android SDK 35, and Gradle 8.13. The APK is only cons
 ## Security
 
 Never store a Discord bot token, user token, or other secret in a preset file or commit it to this repository.
+
+
+## Discord account login setup
+
+The app now includes a real browser-based Discord OAuth2 sign-in flow using the `identify` scope and PKCE. It does not collect your Discord password and does not ask for your account token. The OAuth access token is used only in memory to request the basic profile and is not saved by the app.
+
+Before the first login:
+
+1. Open the [Discord Developer Portal](https://discord.com/developers/applications) and create or select an application you control.
+2. Copy its **Application ID** (Client ID) and enter it in Presence Studio.
+3. In the application's OAuth2 settings, add this exact redirect URL: `presencestudio://oauth/callback`.
+4. Ensure the application is configured as a public client for the PKCE authorization-code flow, if the portal exposes that option.
+5. Tap **Connect Discord**, approve the requested `identify` permission in the browser, and return to the app.
+
+If Discord rejects the redirect URI or token exchange, verify that the URI matches exactly and that the application supports public-client PKCE. Never add a client secret to the Android app.
+
+**Login is not Rich Presence publishing.** The app currently displays the signed-in Discord username, but does not yet send activities to Discord. The next integration should use Discord's supported Android Social SDK/RPC route and must be tested independently.
