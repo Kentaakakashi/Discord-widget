@@ -105,8 +105,6 @@ private fun starterPresets() = listOf(
 
 private const val DISCORD_REDIRECT_URI = "presencestudio://oauth/callback"
 
-private fun contextPrefsClientId(): String = ""
-
 private val accent = Color(0xFF9B87F5)
 private val bg = Color(0xFF0C0D12)
 private val panel = Color(0xFF171821)
@@ -118,7 +116,7 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
     var active by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Preset?>(null) }
     var notice by remember { mutableStateOf("Presets stay on this device • Discord publishing is not connected") }
-    var clientId by remember { mutableStateOf("") }
+    var clientId by remember { mutableStateOf(context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).getString("discord_client_id", "") ?: "") }
     var discordUser by remember { mutableStateOf("") }
     var oauthState by remember { mutableStateOf("") }
     var oauthVerifier by remember { mutableStateOf("") }
