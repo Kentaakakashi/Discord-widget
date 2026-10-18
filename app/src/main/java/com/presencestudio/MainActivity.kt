@@ -115,6 +115,7 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
     var presets by remember { mutableStateOf(initial) }
     var active by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Preset?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
     var notice by remember { mutableStateOf("Presets stay on this device • Discord publishing is not connected") }
     var clientId by remember { mutableStateOf(context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).getString("discord_client_id", "") ?: "") }
     var discordUser by remember { mutableStateOf("") }
@@ -122,7 +123,6 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
     var oauthVerifier by remember { mutableStateOf("") }
     var oauthBusy by remember { mutableStateOf(false) }
     var oauthHandled by remember { mutableStateOf("") }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
