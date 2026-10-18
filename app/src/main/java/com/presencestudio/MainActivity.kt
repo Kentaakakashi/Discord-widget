@@ -213,10 +213,11 @@ private fun Editor(p: Preset, onCancel: () -> Unit, onSave: (Preset) -> Unit) {
     var artUri by remember(p.id) { mutableStateOf(p.artworkUri) }
     var start by remember(p.id) { mutableStateOf(if (p.startTimestamp > 0L) p.startTimestamp.toString() else "") }
     var end by remember(p.id) { mutableStateOf(if (p.endTimestamp > 0L) p.endTimestamp.toString() else "") }
+    val editorContext = androidx.compose.ui.platform.LocalContext.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             artUri = uri.toString()
-            try { androidx.compose.ui.platform.LocalContext.current.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
+            try { editorContext.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
         }
     }
     Column(Modifier.fillMaxSize().padding(18.dp)) {
