@@ -23,14 +23,16 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          tools: ""
-          platform-tools: true
+      - name: Configure Android SDK
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
 
-      - name: Install Android 35 platform and build tools
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Accept licenses and install Android 35
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Install Gradle
         run: |
