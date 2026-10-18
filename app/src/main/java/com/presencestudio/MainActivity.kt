@@ -2,6 +2,15 @@ package com.presencestudio
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.util.Base64
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.concurrent.Executors
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -64,6 +73,8 @@ private fun JSONObject.toPreset() = Preset(
 )
 
 class MainActivity : ComponentActivity() {
+    private var callbackUri by mutableStateOf<Uri?>(null)
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); callbackUri = intent.data }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("presence_studio", MODE_PRIVATE)
@@ -79,7 +90,8 @@ class MainActivity : ComponentActivity() {
             list.forEach { a.put(it.toJson()) }
             prefs.edit().putString("presets", a.toString()).apply()
         }
-        setContent { StudioScreen(load(), ::save) }
+        callbackUri = intent?.data
+        setContent { StudioScreen(load(), ::save, callbackUri) }
     }
 }
 
@@ -91,17 +103,27 @@ private fun starterPresets() = listOf(
     Preset("youtube", "YouTube", type = "Watching", details = "Watching videos", state = "Just chilling")
 )
 
+private const val DISCORD_REDIRECT_URI = "presencestudio://oauth/callback"
+
+private fun contextPrefsClientId(): String = ""
+
 private val accent = Color(0xFF9B87F5)
 private val bg = Color(0xFF0C0D12)
 private val panel = Color(0xFF171821)
 private val muted = Color(0xFF9A9AAF)
 
 @Composable
-private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit) {
+private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oauthCallback: Uri?) {
     var presets by remember { mutableStateOf(initial) }
     var active by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Preset?>(null) }
     var notice by remember { mutableStateOf("Presets stay on this device • Discord publishing is not connected") }
+    var clientId by remember { mutableStateOf("") }
+    var discordUser by remember { mutableStateOf("") }
+    var oauthState by remember { mutableStateOf("") }
+    var oauthVerifier by remember { mutableStateOf("") }
+    var oauthBusy by remember { mutableStateOf(false) }
+    var oauthHandled by remember { mutableStateOf("") }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -128,6 +150,59 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit) {
             active = null
             notice = "Imported ${imported.size} preset(s)"
         } catch (e: Exception) { notice = "Import failed: ${e.message}" }
+    }
+
+    LaunchedEffect(oauthCallback) {
+        val callback = oauthCallback ?: return@LaunchedEffect
+        if (callback.toString() == oauthHandled) return@LaunchedEffect
+        oauthHandled = callback.toString()
+        val returnedState = callback.getQueryParameter("state")
+        val code = callback.getQueryParameter("code")
+        val error = callback.getQueryParameter("error")
+        if (error != null) { notice = "Discord login cancelled or denied: $error"; return@LaunchedEffect }
+        if (returnedState.isNullOrBlank() || returnedState != oauthState || code.isNullOrBlank() || oauthVerifier.isBlank()) {
+            notice = "Discord callback invalid or expired. Try connecting again."; return@LaunchedEffect
+        }
+        oauthBusy = true
+        Executors.newSingleThreadExecutor().execute {
+            try {
+                val body = listOf(
+                    "client_id" to clientId.trim(),
+                    "grant_type" to "authorization_code",
+                    "code" to code,
+                    "redirect_uri" to DISCORD_REDIRECT_URI,
+                    "code_verifier" to oauthVerifier
+                ).joinToString("&") { (k,v) -> "${URLEncoder.encode(k, "UTF-8")}=${URLEncoder.encode(v, "UTF-8")}" }
+                val conn = (URL("https://discord.com/api/oauth2/token").openConnection() as HttpURLConnection)
+                conn.requestMethod = "POST"; conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+                conn.connectTimeout = 15000; conn.readTimeout = 15000
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                val responseCode = conn.responseCode
+                val response = (if (responseCode in 200..299) conn.inputStream else conn.errorStream)
+                    ?.bufferedReader()?.use { it.readText() } ?: "{}"
+                if (responseCode !in 200..299) error("Token exchange failed (HTTP $responseCode): ${JSONObject(response).optString("error_description", JSONObject(response).optString("error"))}")
+                val tokenJson = JSONObject(response)
+                val token = tokenJson.optString("access_token")
+                if (token.isBlank()) error("Discord did not return an access token")
+                val meConn = (URL("https://discord.com/api/users/@me").openConnection() as HttpURLConnection)
+                meConn.setRequestProperty("Authorization", "Bearer $token")
+                meConn.connectTimeout = 15000; meConn.readTimeout = 15000
+                val meCode = meConn.responseCode
+                val meText = (if (meCode in 200..299) meConn.inputStream else meConn.errorStream)
+                    ?.bufferedReader()?.use { it.readText() } ?: "{}"
+                if (meCode !in 200..299) error("Could not read Discord profile (HTTP $meCode)")
+                val me = JSONObject(meText)
+                val label = me.optString("global_name").ifBlank { me.optString("username", "Discord user") }
+                Handler(Looper.getMainLooper()).post {
+                    discordUser = label
+                    oauthBusy = false
+                    notice = "Connected as $label. Account login works; Rich Presence publishing is a separate integration."
+                }
+            } catch (e: Exception) {
+                Handler(Looper.getMainLooper()).post { oauthBusy = false; notice = "Discord login failed: ${e.message}" }
+            }
+        }
     }
 
     fun persist(list: List<Preset>) { presets = list; save(list) }
@@ -159,6 +234,41 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit) {
                         Text(selected?.state ?: "Preview only — not published", color = Color(0xFF79D6A5))
                         if (selected != null && selected.endTimestamp > 0L) {
                             Text("Ends: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(selected.endTimestamp))}", color = muted)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Column(Modifier.fillMaxWidth().background(panel, RoundedCornerShape(16.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("DISCORD ACCOUNT", color = accent, style = MaterialTheme.typography.labelMedium)
+                        if (discordUser.isNotBlank()) {
+                            Text("Connected as $discordUser", fontWeight = FontWeight.SemiBold)
+                            OutlinedButton(onClick = { discordUser = ""; notice = "Disconnected locally. Revoke app access in Discord settings if needed." }, modifier = Modifier.fillMaxWidth()) { Text("Disconnect") }
+                        } else {
+                            OutlinedTextField(value = clientId, onValueChange = { clientId = it; context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).edit().putString("discord_client_id", it).apply() }, label = { Text("Discord Application / Client ID") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            Button(onClick = {
+                                val id = clientId.trim()
+                                if (id.isBlank() || !id.all(Char::isDigit)) { notice = "Enter the numeric Client ID from Discord Developer Portal first." }
+                                else try {
+                                    val random = ByteArray(32).also { SecureRandom().nextBytes(it) }
+                                    val verifier = Base64.encodeToString(random, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+                                    val challenge = Base64.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()), Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+                                    val state = Base64.encodeToString(ByteArray(24).also { SecureRandom().nextBytes(it) }, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+                                    oauthVerifier = verifier; oauthState = state
+                                    val auth = Uri.parse("https://discord.com/oauth2/authorize").buildUpon()
+                                        .appendQueryParameter("client_id", id)
+                                        .appendQueryParameter("response_type", "code")
+                                        .appendQueryParameter("redirect_uri", DISCORD_REDIRECT_URI)
+                                        .appendQueryParameter("scope", "identify")
+                                        .appendQueryParameter("state", state)
+                                        .appendQueryParameter("code_challenge", challenge)
+                                        .appendQueryParameter("code_challenge_method", "S256")
+                                        .build()
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, auth))
+                                    notice = "Complete sign-in in Discord's browser page, then return here."
+                                } catch (e: Exception) { notice = "Could not start Discord login: ${e.message}" }
+                            }, enabled = !oauthBusy, modifier = Modifier.fillMaxWidth()) {
+                                if (oauthBusy) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp) else Text("Connect Discord")
+                            }
+                            Text("Uses Discord OAuth in your browser. Never enter your Discord password inside Presence Studio.", color = muted, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Spacer(Modifier.height(8.dp))
