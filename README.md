@@ -1,10 +1,10 @@
-# Presence Studio
+# Veltrix Nova
 
 An Android-first, Kotlin + Jetpack Compose app for creating and organizing custom Discord Rich Presence preset ideas.
 
 ## Current status
 
-- Native Android app with a dark theme and purple accents.
+- Native Android app with a dark liquid-glass-inspired surfaces with violet and cyan accents.
 - Local preset storage.
 - Create, edit, select, and delete presets.
 - Activity types: Playing, Watching, Listening.
@@ -20,7 +20,7 @@ An Android-first, Kotlin + Jetpack Compose app for creating and organizing custo
 
 Discord's current documentation describes Android Rich Presence through the Discord Social SDK (including RPC without authentication when the Discord Android app is installed and signed in). That is the legitimate route to investigate next. The implementation still needs to be integrated and tested against Discord's supported SDK and application requirements before this app can claim to publish activities. Standard OAuth login alone is not sufficient.
 
-Presence Studio will not extract Discord WebView session tokens, ask users to paste account tokens, or automate a normal user account through self-bot techniques.
+Veltrix Nova will not extract Discord WebView session tokens, ask users to paste account tokens, or automate a normal user account through self-bot techniques.
 
 ## JSON import/export
 
@@ -31,7 +31,7 @@ Use **Import JSON** or **Export JSON** on the main screen. Export writes the cur
 1. Open the repository's **Actions** tab.
 2. Select **Build Android APK**.
 3. Tap **Run workflow** to start a build manually, or push a commit to `main`.
-4. Open the completed run and download the `PresenceStudio-debug-apk` artifact.
+4. Open the completed run and download the `VeltrixNova-debug-apk` artifact.
 
 The workflow uses Java 17, Android SDK 35, and Gradle 8.13. The APK is only considered build-verified after the relevant Actions run completes successfully and the artifact is present.
 
@@ -47,7 +47,7 @@ The app now includes a real browser-based Discord OAuth2 sign-in flow using the 
 Before the first login:
 
 1. Open the [Discord Developer Portal](https://discord.com/developers/applications) and create or select an application you control.
-2. Copy its **Application ID** (Client ID) and enter it in Presence Studio.
+2. Copy its **Application ID** (Client ID) and enter it in Veltrix Nova.
 3. In the application's OAuth2 settings, add this exact redirect URL: `presencestudio://oauth/callback`.
 4. Ensure the application is configured as a public client for the PKCE authorization-code flow, if the portal exposes that option.
 5. Tap **Connect Discord**, approve the requested `identify` permission in the browser, and return to the app.
