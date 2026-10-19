@@ -8,7 +8,6 @@ on:
     paths:
       - "firebase.json"
       - "firestore.rules"
-      - "functions/**"
       - ".github/workflows/firebase-deploy.yml"
 
 permissions:
@@ -16,7 +15,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy Firestore rules and Cloud Functions
+    name: Deploy Firestore rules only (Spark-compatible)
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch
@@ -34,10 +33,6 @@ jobs:
 
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
-
-      - name: Install function dependencies
-        working-directory: functions
-        run: npm install --omit=dev
-
-      - name: Deploy Firestore rules and Cloud Functions
-        run: firebase deploy --project veltrix-nova-57 --only firestore:rules,functions --non-interactive
+ 
+      - name: Deploy Firestore rules only
+        run: firebase deploy --project veltrix-nova-57 --only firestore:rules --non-interactive
