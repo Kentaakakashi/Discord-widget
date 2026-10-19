@@ -2,7 +2,7 @@
 
 ## Identity contract
 
-- Discord OAuth is the only sign-in provider. Do not add Google, email/password, or a separate Presence Studio account.
+- Discord OAuth is the only sign-in provider. Do not add Google, email/password, or a separate Veltrix Nova account.
 - The Android client must never submit a Discord user ID as proof of identity.
 - The trusted function obtains the identity from Discord's `/api/v10/users/@me` endpoint using the OAuth access token.
 - Firebase UID is deterministically derived from the verified immutable Discord snowflake (`discord_<snowflake>`). Usernames and display names are labels only and must never be used as keys.
