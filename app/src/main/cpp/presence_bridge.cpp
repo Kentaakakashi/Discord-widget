@@ -1,3 +1,4 @@
+#define DISCORDPP_IMPLEMENTATION
 #include <jni.h>
 #include <android/log.h>
 #include <discordpp.h>
