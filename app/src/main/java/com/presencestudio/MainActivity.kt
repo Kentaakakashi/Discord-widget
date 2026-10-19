@@ -74,9 +74,30 @@ private fun JSONObject.toPreset() = Preset(
 
 class MainActivity : ComponentActivity() {
     private var callbackUri by mutableStateOf<Uri?>(null)
+    private var presenceSdkReady = false
+    private val sdkHandler = Handler(Looper.getMainLooper())
+    private val sdkPump = object : Runnable {
+        override fun run() {
+            if (presenceSdkReady) {
+                try { DiscordPresenceBridge.nativeRunCallbacks() } catch (_: Throwable) {}
+                sdkHandler.postDelayed(this, 25L)
+            }
+        }
+    }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); callbackUri = intent.data }
+    override fun onDestroy() {
+        sdkHandler.removeCallbacks(sdkPump)
+        super.onDestroy()
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            DiscordPresenceBridge.initialize(this)
+            presenceSdkReady = true
+            sdkHandler.post(sdkPump)
+        } catch (e: Throwable) {
+            android.util.Log.e("PresenceStudio", "Discord Social SDK initialization failed", e)
+        }
         val prefs = getSharedPreferences("presence_studio", MODE_PRIVATE)
         fun load(): List<Preset> {
             val raw = prefs.getString("presets", null) ?: return starterPresets()
@@ -91,7 +112,19 @@ class MainActivity : ComponentActivity() {
             prefs.edit().putString("presets", a.toString()).apply()
         }
         callbackUri = intent?.data
-        setContent { StudioScreen(load(), ::save, callbackUri) }
+        setContent {
+            StudioScreen(
+                load(), ::save, callbackUri, presenceSdkReady,
+                onPublish = { p, id ->
+                    DiscordPresenceBridge.nativePublish(
+                        id, p.name, p.type, p.details, p.state, p.artworkKey,
+                        p.button1, p.url1, p.button2, p.url2,
+                        p.startTimestamp, p.endTimestamp
+                    )
+                },
+                onClearPresence = { DiscordPresenceBridge.nativeClear() }
+            )
+        }
     }
 }
 
@@ -111,14 +144,29 @@ private val panel = Color(0xFF171821)
 private val muted = Color(0xFF9A9AAF)
 
 @Composable
-private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oauthCallback: Uri?) {
+private fun StudioScreen(
+    initial: List<Preset>,
+    save: (List<Preset>) -> Unit,
+    oauthCallback: Uri?,
+    presenceSdkReady: Boolean,
+    onPublish: (Preset, String) -> Unit,
+    onClearPresence: () -> Unit
+) {
     var presets by remember { mutableStateOf(initial) }
     var active by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Preset?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
-    var notice by remember { mutableStateOf("Presets stay on this device • Discord publishing is not connected") }
+    var notice by remember { mutableStateOf(if (presenceSdkReady) "Ready to publish through Discord's Android RPC" else "Discord SDK could not initialize. Check the build logs.") }
+    var publishing by remember { mutableStateOf(false) }
     var clientId by remember { mutableStateOf(context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).getString("discord_client_id", "") ?: "") }
     var discordUser by remember { mutableStateOf("") }
+    DisposableEffect(Unit) {
+        DiscordPresenceBridge.setResultListener { _, message ->
+            publishing = false
+            notice = message
+        }
+        onDispose { DiscordPresenceBridge.setResultListener(null) }
+    }
     val oauthPrefs = remember { context.getSharedPreferences("presence_studio_oauth", android.content.Context.MODE_PRIVATE) }
     // Persist PKCE transaction values so Android recreation does not lose them.
     var oauthState by remember { mutableStateOf(oauthPrefs.getString("state", "") ?: "") }
@@ -243,7 +291,34 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
                         Spacer(Modifier.height(8.dp))
                         Text(selected?.name ?: "No activity selected", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(selected?.details ?: "Choose a preset below", color = muted)
-                        Text(selected?.state ?: "Preview only — not published", color = Color(0xFF79D6A5))
+                        Text(selected?.state ?: "Choose a preset to publish", color = Color(0xFF79D6A5))
+                        if (selected != null) {
+                            Spacer(Modifier.height(10.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                Button(
+                                    onClick = {
+                                        if (clientId.trim().isBlank() || !clientId.trim().all(Char::isDigit)) {
+                                            notice = "Enter your numeric Discord Application ID first."
+                                        } else if (!presenceSdkReady) {
+                                            notice = "Discord SDK isn't available in this build."
+                                        } else {
+                                            publishing = true
+                                            notice = "Sending “${selected.name}” to Discord…"
+                                            onPublish(selected, clientId.trim())
+                                        }
+                                    },
+                                    enabled = !publishing && presenceSdkReady,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    if (publishing) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    else Text("Publish to Discord")
+                                }
+                                OutlinedButton(
+                                    onClick = { onClearPresence(); notice = "Clear Presence requested" },
+                                    enabled = presenceSdkReady
+                                ) { Text("Clear") }
+                            }
+                        }
                         if (selected != null && selected.endTimestamp > 0L) {
                             Text("Ends: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(selected.endTimestamp))}", color = muted)
                         }
@@ -300,7 +375,7 @@ private fun StudioScreen(initial: List<Preset>, save: (List<Preset>) -> Unit, oa
                         items(presets, key = { it.id }) { p ->
                             Row(Modifier.fillMaxWidth()
                                 .background(if (active == p.id) Color(0xFF242036) else panel, RoundedCornerShape(16.dp))
-                                .clickable { active = p.id; notice = "Selected “${p.name}” • preview only, not published" }
+                                .clickable { active = p.id; notice = "Selected “${p.name}” • ready to publish" }
                                 .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Gamepad, null, tint = accent, modifier = Modifier.size(30.dp))
                                 Spacer(Modifier.width(9.dp))
@@ -360,6 +435,7 @@ private fun Editor(p: Preset, onCancel: () -> Unit, onSave: (Preset) -> Unit) {
             item { OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text(if (artUri.isBlank()) "Choose artwork image" else "Change selected artwork") } }
             item { Text(if (artUri.isBlank()) "No local image selected" else "Image selected on this device", color = muted) }
             item { Text("TIMESTAMPS (Unix milliseconds; optional)", color = accent) }
+            item { Text("Discord converts these to Unix seconds when publishing. Artwork must be an uploaded Discord asset key or supported external URL; a local image URI cannot be published directly.", color = muted, style = MaterialTheme.typography.bodySmall) }
             item { OutlinedTextField(start, { start = it.filter(Char::isDigit) }, label = { Text("Start timestamp") }, modifier = Modifier.fillMaxWidth()) }
             item { OutlinedTextField(end, { end = it.filter(Char::isDigit) }, label = { Text("End timestamp") }, modifier = Modifier.fillMaxWidth()) }
             item { Text("BUTTON 1", color = accent) }
