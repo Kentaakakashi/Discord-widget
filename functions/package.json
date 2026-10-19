@@ -1,0 +1,17 @@
+{
+  "name": "presence-studio-functions",
+  "description": "Trusted backend for Discord identity verification and Firebase custom authentication",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions,firestore",
+    "deploy": "firebase deploy --only functions,firestore:rules"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.2"
+  }
+}
