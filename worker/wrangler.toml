@@ -1,0 +1,3 @@
+name = "veltrix-nova-auth-bridge"
+main = "index.js"
+compatibility_date = "2026-10-19"
