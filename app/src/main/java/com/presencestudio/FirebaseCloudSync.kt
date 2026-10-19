@@ -106,6 +106,30 @@ object FirebaseCloudSync {
         }
     }
 
+    fun savePresets(presetsJson: String, callback: (Result<Unit>) -> Unit = {}) {
+        io.execute {
+            try {
+                val user = auth.currentUser ?: error("Sign in to sync presets.")
+                require(user.uid.startsWith("discord_")) { "Unexpected Firebase account identity." }
+                val latch = java.util.concurrent.CountDownLatch(1)
+                var failure: Exception? = null
+                db.collection("users").document(user.uid).collection("appData").document("main")
+                    .set(mapOf(
+                        "presetsJson" to presetsJson,
+                        "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                        "schemaVersion" to 1
+                    ))
+                    .addOnSuccessListener { latch.countDown() }
+                    .addOnFailureListener { failure = it; latch.countDown() }
+                if (!latch.await(30, java.util.concurrent.TimeUnit.SECONDS)) error("Cloud data upload timed out.")
+                failure?.let { throw it }
+                callback(Result.success(Unit))
+            } catch (error: Exception) {
+                callback(Result.failure(error))
+            }
+        }
+    }
+
     fun signOut() {
         auth.signOut()
     }
