@@ -1,57 +1,99 @@
+<div align="center">
+
+<img src="assets/veltrix-nova-logo.svg" alt="Veltrix Nova liquid-glass logo" width="720" />
+
 # Veltrix Nova
 
-An Android-first, Kotlin + Jetpack Compose app for creating and organizing custom Discord Rich Presence preset ideas.
+### Make your Discord presence feel like yours.
 
-## Current status
+A phone-first Android app for designing, saving, and publishing custom Discord Rich Presence activities — with a dark liquid-glass interface, electric violet highlights, and cyan glow.
 
-- Native Android app with a dark liquid-glass-inspired surfaces with violet and cyan accents.
-- Local preset storage.
-- Create, edit, select, and delete presets.
-- Activity types: Playing, Watching, Listening.
-- Details, state, two button labels/URLs, and Discord artwork asset key fields.
-- Select a local image and retain its URI in the preset.
-- Optional start/end timestamps stored as Unix milliseconds.
-- Import/export presets as JSON files through Android's document picker.
-- GitHub Actions workflow builds a debug APK on pushes to `main` or manual workflow dispatch.
+[![Android CI](https://github.com/Kentaakakashi/Discord-widget/actions/workflows/android-build.yml/badge.svg?branch=feature%2Fsocial-sdk-rich-presence)](https://github.com/Kentaakakashi/Discord-widget/actions/workflows/android-build.yml)
+[![Platform](https://img.shields.io/badge/platform-Android-65E6F2?style=flat-square)](#)
+[![Built with](https://img.shields.io/badge/built%20with-Kotlin%20%2B%20Compose-9B87F5?style=flat-square)](#)
 
-## Important publishing limitation
+</div>
 
-**This app currently does not publish activity to Discord.** Selecting a preset changes the local preview only. The artwork picker stores a local image URI; it does not upload the image to Discord or make it visible on a profile. Timestamps and button fields are saved in the preset, but are not sent to Discord.
+---
 
-Discord's current documentation describes Android Rich Presence through the Discord Social SDK (including RPC without authentication when the Discord Android app is installed and signed in). That is the legitimate route to investigate next. The implementation still needs to be integrated and tested against Discord's supported SDK and application requirements before this app can claim to publish activities. Standard OAuth login alone is not sufficient.
+## ✨ What is Veltrix Nova?
 
-Veltrix Nova will not extract Discord WebView session tokens, ask users to paste account tokens, or automate a normal user account through self-bot techniques.
+Veltrix Nova is an Android-first workspace for shaping the activity people see on your Discord profile. Create reusable presence presets, tune the details and state, choose artwork keys, configure button labels and URLs, and keep a library of different activities for gaming, music, watching, development, and more.
 
-## JSON import/export
+The app is designed for a phone-first workflow: build and test through GitHub Actions, download the APK from your Android device, and manage your presets without needing a desktop development environment.
 
-Use **Import JSON** or **Export JSON** on the main screen. Export writes the current preset list to a JSON file. Import replaces the current local preset list with the presets in the selected JSON file. Keep exported files private if they contain personal activity descriptions or links.
+## 🚀 Features
 
-## Build the APK on a phone
+- **Rich Presence presets** — create, edit, select, and delete your own activities.
+- **Activity types** — Playing, Watching, and Listening.
+- **Activity details** — customize the activity name, details, and state.
+- **Buttons** — configure up to two button labels and URLs in a preset.
+- **Artwork fields** — choose a local image URI and store a Discord artwork asset key.
+- **Timestamps** — optional start and end timestamps stored with each preset.
+- **JSON portability** — import and export your preset library using Android's document picker.
+- **Discord sign-in** — browser-based OAuth 2.0 with PKCE and the `identify` scope; no Discord password or account token is requested by the app.
+- **Native Android SDK work** — includes the Discord Social SDK AAR and an Android RPC bridge, with publishing dependent on the supported SDK flow and configuration.
+- **Liquid-glass visual direction** — near-black surfaces, glassy edges, violet gradients, and cyan light.
 
-1. Open the repository's **Actions** tab.
-2. Select **Build Android APK**.
-3. Tap **Run workflow** to start a build manually, or push a commit to `main`.
-4. Open the completed run and download the `VeltrixNova-debug-apk` artifact.
+## 📱 Screenshots and branding
 
-The workflow uses Java 17, Android SDK 35, and Gradle 8.13. The APK is only considered build-verified after the relevant Actions run completes successfully and the artifact is present.
+The logo is available as a scalable SVG at [`assets/veltrix-nova-logo.svg`](assets/veltrix-nova-logo.svg). The Android launcher uses a compact vector version of the same violet/cyan glass emblem, designed to remain legible at small icon sizes.
 
-## Security
+## ⚠️ Current status — read before using
 
-Never store a Discord bot token, user token, or other secret in a preset file or commit it to this repository.
+The app's capabilities are still being validated. A configured preset and a local preview do not, by themselves, prove that Discord has received or displayed the activity. Publishing depends on a compatible Discord Android installation/session, a valid application configuration, and successful execution of the supported Social SDK/RPC path.
 
+- OAuth sign-in identifies the Discord account; **login is not the same thing as publishing Rich Presence**.
+- Local artwork URIs are stored locally. They do not upload images to Discord or automatically create Discord asset keys.
+- Button labels, URLs, and timestamps are editable preset data; support in the actual published activity must be verified on-device.
+- Treat a feature as working only after a successful build and a real Discord profile test.
 
-## Discord account login setup
+The project deliberately does **not** extract Discord WebView session tokens, request users' account tokens, or automate a normal Discord user account through self-bot techniques.
 
-The app now includes a real browser-based Discord OAuth2 sign-in flow using the `identify` scope and PKCE. It does not collect your Discord password and does not ask for your account token. The OAuth access token is used only in memory to request the basic profile and is not saved by the app.
+## 🛠️ Build an APK on your phone
 
-Before the first login:
+No local Android Studio installation is required for the repository's GitHub Actions workflow.
+
+1. Open the [Actions workflow](https://github.com/Kentaakakashi/Discord-widget/actions/workflows/android-build.yml).
+2. Choose **Build Android APK** and tap **Run workflow** to build the current branch, or push a commit to `feature/social-sdk-rich-presence`.
+3. Open the completed run and wait for the build job to finish successfully.
+4. Download the `VeltrixNova-debug-apk` artifact.
+5. Extract the ZIP and install the debug APK on your Android device. If Android blocks installation, allow installs for the app you used to open the APK.
+
+**Build note:** the workflow's success status and the presence of its APK artifact are the source of truth. A commit alone does not mean the APK has built successfully.
+
+## 🔐 Discord OAuth setup
 
 1. Open the [Discord Developer Portal](https://discord.com/developers/applications) and create or select an application you control.
-2. Copy its **Application ID** (Client ID) and enter it in Veltrix Nova.
-3. In the application's OAuth2 settings, add this exact redirect URL: `presencestudio://oauth/callback`.
-4. Ensure the application is configured as a public client for the PKCE authorization-code flow, if the portal exposes that option.
-5. Tap **Connect Discord**, approve the requested `identify` permission in the browser, and return to the app.
+2. Copy its **Application ID / Client ID** into Veltrix Nova.
+3. Add this exact redirect URI in the application's OAuth2 settings: `presencestudio://oauth/callback`.
+4. Use the browser-based PKCE flow and grant only the requested `identify` scope.
+5. Tap **Connect Discord**, complete the browser prompt, and return to the app.
 
-If Discord rejects the redirect URI or token exchange, verify that the URI matches exactly and that the application supports public-client PKCE. Never add a client secret to the Android app.
+The redirect scheme remains `presencestudio` intentionally to preserve the existing OAuth configuration. Do not add a client secret to the APK; mobile apps cannot keep embedded secrets confidential.
 
-**Login is not Rich Presence publishing.** The app currently displays the signed-in Discord username, but does not yet send activities to Discord. The next integration should use Discord's supported Android Social SDK/RPC route and must be tested independently.
+## 🧭 Project direction
+
+- Validate the Android Social SDK/RPC publishing path against Discord's current supported documentation.
+- Make connection and publish status explicit, including actionable error feedback.
+- Test actual activity visibility on a Discord profile rather than relying only on local state.
+- Continue refining the violet/cyan liquid-glass UI while keeping the app usable on small screens.
+
+## 🧱 Tech stack
+
+- Kotlin
+- Jetpack Compose + Material 3
+- Android SDK 35 / Java 17
+- Discord Social SDK AAR and native bridge
+- GitHub Actions for debug APK builds
+
+## 🔒 Security
+
+- Never commit Discord bot tokens, user tokens, client secrets, or API credentials.
+- Keep exported preset JSON files private if they contain personal descriptions or links.
+- Use only official Discord authorization and supported SDK interfaces.
+- Review permissions and OAuth scopes before granting access.
+
+## 📄 License and status
+
+This repository is a work in progress. Check the repository's license and Discord's current developer documentation before redistributing or publishing builds.
