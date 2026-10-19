@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<defs>
+ <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a9f4ff"/><stop offset=".38" stop-color="#3978ff"/><stop offset=".72" stop-color="#7042ff"/><stop offset="1" stop-color="#ef6bff"/></linearGradient>
+ <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#57dfff"/><stop offset=".55" stop-color="#4c54ff"/><stop offset="1" stop-color="#d45bff"/></linearGradient>
+ <radialGradient id="bg" cx=".25" cy=".08" r="1"><stop stop-color="#111d46"/><stop offset=".48" stop-color="#080b19"/><stop offset="1" stop-color="#03040a"/></radialGradient>
+ <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<rect x="20" y="20" width="472" height="472" rx="98" fill="none" stroke="url(#rim)" stroke-width="2" opacity=".8"/>
+<path d="M82 92 Q256 15 430 92" fill="none" stroke="#5cbfff" stroke-opacity=".14" stroke-width="1"/>
+<g filter="url(#glow)">
+ <path d="M115 153 Q115 141 128 141 H384 Q397 141 397 154 V171 Q397 183 384 183 H288 V342 Q288 357 273 357 H239 Q224 357 224 342 V183 H128 Q115 183 115 171Z" fill="url(#glass)"/>
+ <path d="M128 146 H382 Q390 146 390 154 V161 H128Z" fill="url(#shine)" opacity=".42"/>
+ <ellipse cx="256" cy="252" rx="166" ry="64" transform="rotate(-22 256 252)" fill="none" stroke="url(#rim)" stroke-width="7" opacity=".95"/>
+ <path d="M347 194 l8 18 19 8 -19 8 -8 19 -8 -19 -19 -8 19 -8Z" fill="#d6faff"/>
+</g>
+<path d="M170 393 H342" stroke="url(#rim)" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+<text x="256" y="438" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="43" font-weight="700" letter-spacing="12" fill="#f1f5ff">THEO</text>
+<circle cx="407" cy="108" r="3" fill="#9c7bff"/>
+<circle cx="96" cy="386" r="2" fill="#65dfff"/>
+</svg>
