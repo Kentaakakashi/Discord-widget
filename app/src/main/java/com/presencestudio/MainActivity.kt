@@ -17,6 +17,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -139,10 +141,12 @@ private fun starterPresets() = listOf(
 
 private const val DISCORD_REDIRECT_URI = "presencestudio://oauth/callback"
 
-private val accent = Color(0xFF9B87F5)
-private val bg = Color(0xFF0C0D12)
-private val panel = Color(0xFF171821)
-private val muted = Color(0xFF9A9AAF)
+private val accent = Color(0xFFB49AFF)
+private val cyan = Color(0xFF65E6F2)
+private val bg = Color(0xFF090A10)
+private val panel = Color(0xFF151622)
+private val muted = Color(0xFFA4A5BD)
+private val glassEdge = Color(0x33C7C2FF)
 
 @Composable
 private fun StudioScreen(
@@ -277,17 +281,22 @@ private fun StudioScreen(
                     notice = "Saved “${p.name}” locally"
                 })
             } else {
-                Column(Modifier.fillMaxSize().padding(18.dp)) {
+                Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF080910), Color(0xFF11101D), Color(0xFF090B12)))).padding(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("PRESENCE STUDIO", color = accent, style = MaterialTheme.typography.labelMedium)
+                            Text("VELTRIX NOVA  /  PRESENCE LAB", color = cyan, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(5.dp))
                             Text("Your activity library", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                            Text("Design it. Preview it. Make it yours.", color = muted, style = MaterialTheme.typography.bodySmall)
                         }
-                        Icon(Icons.Default.Gamepad, null, tint = accent, modifier = Modifier.size(34.dp))
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.background(Color(0x1FB49AFF), RoundedCornerShape(18.dp)).border(1.dp, glassEdge, RoundedCornerShape(18.dp)).padding(horizontal = 13.dp, vertical = 10.dp)) {
+                            Icon(Icons.Default.Gamepad, null, tint = accent, modifier = Modifier.size(27.dp))
+                            Text("NOVA", color = cyan, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
                     }
                     Spacer(Modifier.height(14.dp))
                     val selected = presets.firstOrNull { it.id == active }
-                    Column(Modifier.fillMaxWidth().background(panel, RoundedCornerShape(20.dp)).padding(16.dp)) {
+                    Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF252039), Color(0xFF171A2A), Color(0xFF11151D))), RoundedCornerShape(24.dp)).border(1.dp, glassEdge, RoundedCornerShape(24.dp)).padding(16.dp)) {
                         Text("ACTIVITY PREVIEW", color = muted, style = MaterialTheme.typography.labelMedium)
                         Spacer(Modifier.height(8.dp))
                         Text(selected?.name ?: "No activity selected", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -325,7 +334,7 @@ private fun StudioScreen(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    Column(Modifier.fillMaxWidth().background(panel, RoundedCornerShape(16.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF1C1C2A), Color(0xFF12141D))), RoundedCornerShape(20.dp)).border(1.dp, Color(0x222FE2F2), RoundedCornerShape(20.dp)).padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("DISCORD ACCOUNT", color = accent, style = MaterialTheme.typography.labelMedium)
                         if (discordUser.isNotBlank()) {
                             Text("Connected as $discordUser", fontWeight = FontWeight.SemiBold)
@@ -375,7 +384,8 @@ private fun StudioScreen(
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(vertical = 8.dp)) {
                         items(presets, key = { it.id }) { p ->
                             Row(Modifier.fillMaxWidth()
-                                .background(if (active == p.id) Color(0xFF242036) else panel, RoundedCornerShape(16.dp))
+                                .background(Brush.linearGradient(if (active == p.id) listOf(Color(0xFF302747), Color(0xFF1B2130)) else listOf(Color(0xFF191A26), Color(0xFF11131C))), RoundedCornerShape(18.dp))
+                                .border(1.dp, if (active == p.id) Color(0x887DDBF5) else Color(0x22C7C2FF), RoundedCornerShape(18.dp))
                                 .clickable { active = p.id; notice = "Selected “${p.name}” • ready to publish" }
                                 .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Gamepad, null, tint = accent, modifier = Modifier.size(30.dp))
@@ -420,7 +430,7 @@ private fun Editor(p: Preset, onCancel: () -> Unit, onSave: (Preset) -> Unit) {
         }
     }
     Column(Modifier.fillMaxSize().padding(18.dp)) {
-        Text("PRESET EDITOR", color = accent, style = MaterialTheme.typography.labelMedium)
+        Text("VELTRIX NOVA  /  EDITOR", color = cyan, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         Text("Customize activity", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             item { OutlinedTextField(name, { name = it }, label = { Text("Preset name") }, modifier = Modifier.fillMaxWidth()) }
