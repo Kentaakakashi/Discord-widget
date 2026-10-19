@@ -164,6 +164,7 @@ private fun StudioScreen(
     var notice by remember { mutableStateOf(if (presenceSdkReady) "Ready to publish through Discord's Android RPC" else "Discord SDK could not initialize. Check the build logs.") }
     var publishing by remember { mutableStateOf(false) }
     var clientId by remember { mutableStateOf(context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).getString("discord_client_id", "") ?: "") }
+    var bridgeUrl by remember { mutableStateOf(context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).getString("firebase_bridge_url", "") ?: "") }
     var discordUser by remember { mutableStateOf("") }
     DisposableEffect(Unit) {
         DiscordPresenceBridge.setResultListener { _, message ->
@@ -257,12 +258,29 @@ private fun StudioScreen(
                 if (meCode !in 200..299) error("Could not read Discord profile (HTTP $meCode)")
                 val me = JSONObject(meText)
                 val label = me.optString("global_name").ifBlank { me.optString("username", "Discord user") }
-                oauthPrefs.edit().remove("state").remove("verifier").apply()
-                Handler(Looper.getMainLooper()).post {
-                    oauthState = ""; oauthVerifier = ""
-                    discordUser = label
-                    oauthBusy = false
-                    notice = "Connected as $label. Account login works; Rich Presence publishing is a separate integration."
+                val localJson = JSONArray().apply { presets.forEach { put(it.toJson()) } }.toString()
+                FirebaseCloudSync.signInAndSync(context, bridgeUrl.trim(), token, localJson) { syncResult ->
+                    Handler(Looper.getMainLooper()).post {
+                        oauthPrefs.edit().remove("state").remove("verifier").apply()
+                        oauthState = ""; oauthVerifier = ""
+                        oauthBusy = false
+                        syncResult.onSuccess { mergedJson ->
+                            try {
+                                val mergedArray = JSONArray(mergedJson)
+                                val mergedPresets = (0 until mergedArray.length()).map { mergedArray.getJSONObject(it).toPreset() }
+                                presets = mergedPresets
+                                save(mergedPresets)
+                                discordUser = label
+                                notice = "Connected as $label • presets synced to cloud"
+                            } catch (e: Exception) {
+                                FirebaseCloudSync.signOut()
+                                notice = "Cloud login succeeded but preset data could not be loaded: ${e.message}"
+                            }
+                        }.onFailure { error ->
+                            FirebaseCloudSync.signOut()
+                            notice = "Discord verified, but cloud login/sync failed: ${error.message}"
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Handler(Looper.getMainLooper()).post { oauthBusy = false; notice = "Discord login failed: ${e.message}" }
@@ -270,7 +288,18 @@ private fun StudioScreen(
         }
     }
 
-    fun persist(list: List<Preset>) { presets = list; save(list) }
+    fun persist(list: List<Preset>) {
+        presets = list
+        save(list)
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().currentUser != null) {
+            val json = JSONArray().apply { list.forEach { put(it.toJson()) } }.toString()
+            FirebaseCloudSync.savePresets(json) { result ->
+                Handler(Looper.getMainLooper()).post {
+                    result.onFailure { error -> notice = "Saved locally; cloud sync failed: ${error.message}" }
+                }
+            }
+        }
+    }
     MaterialTheme(colorScheme = darkColorScheme(primary = accent, background = bg, surface = panel,
         onBackground = Color(0xFFEDEDF4), onSurface = Color(0xFFEDEDF4))) {
         Surface(Modifier.fillMaxSize(), color = bg) {
@@ -338,9 +367,11 @@ private fun StudioScreen(
                         Text("DISCORD ACCOUNT", color = accent, style = MaterialTheme.typography.labelMedium)
                         if (discordUser.isNotBlank()) {
                             Text("Connected as $discordUser", fontWeight = FontWeight.SemiBold)
-                            OutlinedButton(onClick = { discordUser = ""; notice = "Disconnected locally. Revoke app access in Discord settings if needed." }, modifier = Modifier.fillMaxWidth()) { Text("Disconnect") }
+                            OutlinedButton(onClick = { FirebaseCloudSync.signOut(); discordUser = ""; notice = "Disconnected from cloud on this device. Revoke app access in Discord settings if needed." }, modifier = Modifier.fillMaxWidth()) { Text("Disconnect") }
                         } else {
                             OutlinedTextField(value = clientId, onValueChange = { clientId = it; context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).edit().putString("discord_client_id", it).apply() }, label = { Text("Discord Application / Client ID") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(value = bridgeUrl, onValueChange = { bridgeUrl = it.trim(); context.getSharedPreferences("presence_studio", android.content.Context.MODE_PRIVATE).edit().putString("firebase_bridge_url", it.trim()).apply() }, label = { Text("Firebase cloud bridge HTTPS URL") }, placeholder = { Text("https://your-worker.workers.dev") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            Text("Required for cloud login and syncing. Deploy the free Worker from the repository docs first.", color = muted, style = MaterialTheme.typography.bodySmall)
                             Button(onClick = {
                                 val id = clientId.trim()
                                 if (id.isBlank() || !id.all(Char::isDigit)) { notice = "Enter the numeric Client ID from Discord Developer Portal first." }
