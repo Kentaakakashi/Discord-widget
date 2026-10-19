@@ -1,0 +1,43 @@
+name: Deploy Firebase backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/social-sdk-rich-presence
+    paths:
+      - "firebase.json"
+      - "firestore.rules"
+      - "functions/**"
+      - ".github/workflows/firebase-deploy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Firestore rules and Cloud Functions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_VELTRIX_NOVA_57 }}
+
+      - name: Install Firebase CLI
+        run: npm install --global firebase-tools
+
+      - name: Install function dependencies
+        working-directory: functions
+        run: npm install --omit=dev
+
+      - name: Deploy Firestore rules and Cloud Functions
+        run: firebase deploy --project veltrix-nova-57 --only firestore:rules,functions --non-interactive
