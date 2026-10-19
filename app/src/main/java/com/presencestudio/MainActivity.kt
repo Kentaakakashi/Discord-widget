@@ -196,14 +196,37 @@ private fun StudioScreen(
         if (uri != null) try {
             val raw = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                 ?: error("Could not read file")
-            val array = JSONArray(raw)
-            val imported = (0 until array.length()).map { array.getJSONObject(it).toPreset() }
-            if (imported.isEmpty()) error("The file contains no presets")
+            // Preset backups are JSON arrays. Never surface parser exceptions here: Android's
+            // JSON parser can include the entire rejected input (including secrets) in its message.
+            val array = try {
+                JSONArray(raw)
+            } catch (_: Exception) {
+                error("This isn't a valid Veltrix Nova preset backup. Choose a JSON file created with Export JSON.")
+            }
+            val imported = try {
+                (0 until array.length()).map { index ->
+                    val item = array.optJSONObject(index)
+                        ?: error("The backup contains an invalid preset entry.")
+                    item.toPreset()
+                }
+            } catch (_: Exception) {
+                error("The backup format is invalid. Your current presets have not been changed.")
+            }
+            if (imported.isEmpty()) error("The backup contains no presets.")
             presets = imported
             save(imported)
             active = null
             notice = "Imported ${imported.size} preset(s)"
-        } catch (e: Exception) { notice = "Import failed: ${e.message}" }
+        } catch (e: Exception) {
+            // Keep exception text out of the UI because it may contain the source file's contents.
+            notice = when (e.message) {
+                "Could not read file" -> "Import failed: couldn't read the selected file."
+                "The backup contains no presets." -> e.message ?: "The backup contains no presets."
+                "The backup format is invalid. Your current presets have not been changed." -> e.message ?: "The backup format is invalid."
+                "This isn't a valid Veltrix Nova preset backup. Choose a JSON file created with Export JSON." -> e.message ?: "Invalid preset backup."
+                else -> "Import failed. Choose a JSON backup exported by Veltrix Nova. Your current presets were not changed."
+            }
+        }
     }
 
     LaunchedEffect(oauthCallback) {
