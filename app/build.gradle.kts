@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -35,8 +36,6 @@ android {
 dependencies {
     implementation(files("libs/discord_partner_sdk.aar"))
     implementation("androidx.browser:browser:1.8.0")
-    // Firebase account identity and per-user cloud preset sync. Initialization stays disabled
-    // until this app is registered in the existing Firebase project configuration.
     implementation(platform("com.google.firebase:firebase-bom:35.0.2"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
