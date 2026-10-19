@@ -130,7 +130,8 @@ class MainActivity : ComponentActivity() {
 
 private fun starterPresets() = listOf(
     Preset("theo", "Theo — Development", details = "Building my personal AI assistant",
-        state = "Shipping features", button1 = "Repository", url1 = "https://github.com/"),
+        state = "Shipping features", button1 = "Repository", url1 = "https://github.com/",
+        artworkKey = "https://raw.githubusercontent.com/Kentaakakashi/Discord-widget/feature/social-sdk-rich-presence/assets/theo-presence.svg"),
     Preset("gaming", "Gaming", details = "Playing a game", state = "Custom session"),
     Preset("movie", "Movie Night", type = "Watching", details = "Watching something good", state = "Cinema mode"),
     Preset("youtube", "YouTube", type = "Watching", details = "Watching videos", state = "Just chilling")
@@ -431,11 +432,11 @@ private fun Editor(p: Preset, onCancel: () -> Unit, onSave: (Preset) -> Unit) {
             }
             item { OutlinedTextField(details, { details = it }, label = { Text("Details / first line") }, modifier = Modifier.fillMaxWidth()) }
             item { OutlinedTextField(state, { state = it }, label = { Text("State / second line") }, modifier = Modifier.fillMaxWidth()) }
-            item { OutlinedTextField(art, { art = it }, label = { Text("Discord artwork asset key") }, modifier = Modifier.fillMaxWidth()) }
+            item { OutlinedTextField(art, { art = it }, label = { Text("Discord artwork key or image URL") }, modifier = Modifier.fillMaxWidth()) }
             item { OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }, modifier = Modifier.fillMaxWidth()) { Text(if (artUri.isBlank()) "Choose artwork image" else "Change selected artwork") } }
             item { Text(if (artUri.isBlank()) "No local image selected" else "Image selected on this device", color = muted) }
             item { Text("TIMESTAMPS (Unix milliseconds; optional)", color = accent) }
-            item { Text("Discord converts these to Unix seconds when publishing. Artwork must be an uploaded Discord asset key or supported external URL; a local image URI cannot be published directly.", color = muted, style = MaterialTheme.typography.bodySmall) }
+            item { Text("Discord converts these to Unix seconds when publishing. Theo artwork URL is prefilled in the Theo preset. Use an uploaded Discord asset key or supported public image URL; a local image URI cannot be published directly.", color = muted, style = MaterialTheme.typography.bodySmall) }
             item { OutlinedTextField(start, { start = it.filter(Char::isDigit) }, label = { Text("Start timestamp") }, modifier = Modifier.fillMaxWidth()) }
             item { OutlinedTextField(end, { end = it.filter(Char::isDigit) }, label = { Text("End timestamp") }, modifier = Modifier.fillMaxWidth()) }
             item { Text("BUTTON 1", color = accent) }
