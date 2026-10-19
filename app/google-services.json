@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "100962340578",
+    "project_id": "veltrix-nova-57",
+    "storage_bucket": "veltrix-nova-57.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:100962340578:android:95512b1d8969c7105358bb",
+        "android_client_info": {
+          "package_name": "com.presencestudio"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbXi4JzIT_48h8q3Cdo_jI3M2hRLS0Qos"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
