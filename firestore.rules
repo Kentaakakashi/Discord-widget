@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // A user's private documents are scoped to their Firebase UID.
+    // Discord identity mappings are server-owned and never client-readable.
+    match /users/{uid} {
+      allow read: if ownsUser(uid);
+      allow create, update: if ownsUser(uid)
+        && !request.resource.data.keys().hasAny(['discordId', 'discordUserId', 'firebaseUid']);
+      allow delete: if ownsUser(uid);
+
+      match /{subcollection}/{documentId} {
+        allow read, write: if ownsUser(uid);
+      }
+    }
+
+    // Identity-to-UID mapping is trusted-backend-only.
+    match /discordIdentityMap/{discordId} {
+      allow read, write: if false;
+    }
+
+    // Community presets are publicly readable, but publication/moderation is
+    // reserved for a trusted backend until ownership and validation are added.
+    match /publicPresets/{presetId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
