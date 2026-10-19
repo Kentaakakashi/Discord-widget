@@ -429,7 +429,7 @@ private fun Editor(p: Preset, onCancel: () -> Unit, onSave: (Preset) -> Unit) {
             try { editorContext.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
         }
     }
-    Column(Modifier.fillMaxSize().padding(18.dp)) {
+    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF080910), Color(0xFF12111E), Color(0xFF090B12)))).padding(18.dp)) {
         Text("VELTRIX NOVA  /  EDITOR", color = cyan, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         Text("Customize activity", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
